@@ -1,2 +1,3 @@
-# beef-analysis
-Exploring economic forecasting strategies to answer the question: How much could a direct substitute for ground beef impact the number of cows slaughtered in the short term?
+# A Strategy for Forecasting the Economic Impact of Alternative Meat
+
+Notebooks with code related to an independent study on conditional forecasting using Bayesian VAR models.
