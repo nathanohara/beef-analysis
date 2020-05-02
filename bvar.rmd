@@ -1,0 +1,133 @@
+---
+title: "BVAR - beef demand"
+author: "Nathan O'Hara"
+date: "4/22/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MSBVAR)
+```
+
+```{r}
+# Read in differenced input for BVAR
+diff = read.csv("diff_beefdemand.csv", header = F)
+diff = ts(diff, deltat = 1/12)
+```
+
+# Unconditional Forecasting
+
+```{r}
+# Fit BVAR model with flat prior and lag 15
+bvar.flat <- szbvar(diff, 15, z = NULL, lambda0 = 1, lambda1 = 1, lambda3 = 1, lambda4 =1, lambda5 = 0,
+                    mu5 = 0, mu6 =0, nu = 0, qm = 4, prior = 2, posterior.fit = F)
+```
+
+
+```{r}
+# Generate empty yconst table for unconditional forecast
+library(phonTools)
+yconst = zeros(30,5)
+```
+
+
+```{r}
+# Unconditional forecast, MCMC simulation based
+uncond_bayes <- hc.forecast(bvar.flat, yconst, 30, burnin = 3000, gibbs = 5000)
+```
+
+```{r}
+# Save unconditional forecast values. These are the means of MCMC sampling
+
+uncond_means = zeros(30,5)
+uncond_lb = zeros(30,5)
+uncond_ub = zeros(30,5)
+
+for (i in 1:5){
+  uncond_means[,i] = colMeans(uncond_bayes$forecast[,,i])
+}
+```
+
+```{r}
+# Also save lower bound and upper bound of a 95% credible interval using the correct quantiles of MCMC samples
+
+lb <- function(x){
+  return(quantile(x, probs = 0.025))
+}
+ub <- function(x){
+  return(quantile(x, probs = 0.975))
+}
+
+for (i in 1:5){
+  uncond_lb[,i] = apply(uncond_bayes$forecast[,,i], 2, lb)
+  uncond_ub[,i] = apply(uncond_bayes$forecast[,,i], 2, ub)
+}
+```
+
+```{r}
+# Write CSV files for use in Python Jupyter Notebook
+write.csv(uncond_means, "bvar_unconditional_mean.csv", row.names = FALSE)
+write.csv(uncond_lb, "bvar_unconditional_lb.csv", row.names = FALSE)
+write.csv(uncond_ub, "bvar_unconditional_ub.csv", row.names = FALSE)
+
+```
+
+
+# Conditional forecasting
+
+```{r}
+# Read in yconst matrix from CSV exported from Python
+yconst = read.csv("conditional_yvals.csv", header = F)
+yconst = data.matrix(yconst)
+```
+
+
+```{r}
+hcond_bayes <- hc.forecast(bvar.flat, yconst, 30, burnin = 3000, gibbs = 5000)
+```
+
+
+```{r}
+# Find conditional forecast means
+
+hcond_means = zeros(30,5)
+
+for (i in 1:5){
+  hcond_means[,i] = colMeans(hcond_bayes$forecast[,,i])
+}
+```
+
+```{r}
+# Write conditional forecast values to CSV for use in Python notebook
+write.csv(hcond_means, "bvar_conditional_mean.csv", row.names = FALSE)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
